@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Report Status Poller</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>Report Status Poller</h1>
+  <p class="subtitle">Request an async report, watch it move through the queue, download when ready.</p>
+  <div class="tooling-actions">
+    <button id="reset-btn" type="button" title="Testing tool — not part of the app under test">↺ Reset data</button>
+    <a href="/spec" target="_blank" rel="noopener" title="Testing tool — not part of the app under test">📋 Spec</a>
+    <a href="/openapi.json" target="_blank" rel="noopener" title="Testing tool — not part of the app under test">📥 API collection</a>
+  </div>
+</header>
+
+<div id="app-section">
+  <main>
+    <section class="panel">
+    <div class="actions">
+      <select id="report-type">
+        <option value="SUMMARY">Summary</option>
+        <option value="DETAILED">Detailed</option>
+      </select>
+      <button id="request-btn">Request Report</button>
+    </div>
+  </section>
+
+  <section class="panel" id="job-panel">
+    <div class="job-row">
+      <span class="label">Job:</span>
+      <span id="job-id">—</span>
+    </div>
+    <div class="job-row">
+      <span class="label">Status:</span>
+      <span id="job-status" class="badge">—</span>
+    </div>
+    <div class="job-row">
+      <span class="label">Progress:</span>
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">0%</span>
+    </div>
+    <div class="actions">
+      <button id="download-btn" disabled>Download</button>
+    </div>
+    <pre id="download-output" class="output hidden"></pre>
+  </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>window.SV_APP_ID='11';window.SV_SCOREBOARD='https://sv-qa-scoreboard.onrender.com';</script>
+<script src="report-widget.js"></script>
+</body>
+</html>
