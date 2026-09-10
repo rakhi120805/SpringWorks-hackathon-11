@@ -319,6 +319,9 @@ app.use((err, req, res, next) => {              // eslint-disable-line no-unused
 process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e));
 process.on('uncaughtException', (e) => console.error('uncaughtException:', e));
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`report-status-poller listening on http://localhost:${PORT}`);
 });
+
+module.exports = { app, server };
+
