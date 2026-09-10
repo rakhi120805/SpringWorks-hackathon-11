@@ -4,7 +4,13 @@ function parseCookies(req) {
   const out = {};
   (req.headers.cookie || '').split(';').forEach((p) => {
     const i = p.indexOf('='); if (i === -1) return;
-    out[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim());
+    const key = p.slice(0, i).trim();
+    const rawVal = p.slice(i + 1).trim();
+    try {
+      out[key] = decodeURIComponent(rawVal);
+    } catch {
+      out[key] = rawVal;
+    }
   });
   return out;
 }

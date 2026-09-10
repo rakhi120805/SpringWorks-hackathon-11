@@ -54,15 +54,19 @@ app.use(perStudentStore(makeSeed));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const REPORT_TYPES = ['SUMMARY', 'DETAILED'];
-const ID_SPACE = 3;
+
+function removeTimer(store, timer) {
+  const idx = store.pendingTimers.indexOf(timer);
+  if (idx !== -1) store.pendingTimers.splice(idx, 1);
+}
 
 function createJob(store, reportType) {
   store.jobCounter++;
-  const id = 'job-' + (store.jobCounter % ID_SPACE);
+  const id = 'job-' + store.jobCounter;
   const job = {
     id,
     status: 'QUEUED',
-    progress: 5,
+    progress: 0,
     reportType: reportType || 'SUMMARY',
     downloaded: false,
     createdAt: new Date().toISOString()
@@ -70,19 +74,23 @@ function createJob(store, reportType) {
   store.jobs[id] = job;
   store.lastCreatedId = id;
 
+  let interval = null;
   const jobTimeout = setTimeout(() => {
+    removeTimer(store, jobTimeout);
     if (!store.jobs[id]) return;
     store.jobs[id].status = 'PROCESSING';
 
-    const interval = setInterval(() => {
+    interval = setInterval(() => {
       if (!store.jobs[id]) {
         clearInterval(interval);
+        removeTimer(store, interval);
         return;
       }
-      store.jobs[id].progress += 30;
-      if (store.jobs[id].progress >= 100) {
-        store.jobs[store.lastCreatedId].status = 'DONE';
+      store.jobs[id].progress = Math.min(100, store.jobs[id].progress + 30);
+      if (store.jobs[id].progress === 100) {
+        store.jobs[id].status = 'DONE';
         clearInterval(interval);
+        removeTimer(store, interval);
       }
     }, 400);
     store.pendingTimers.push(interval);
@@ -94,29 +102,40 @@ function createJob(store, reportType) {
 
 app.post('/api/reports', (req, res) => {
   const reportType = req.body && req.body.reportType;
+  if (reportType !== undefined && !REPORT_TYPES.includes(reportType)) {
+    return res.status(400).json({
+      error: `Invalid reportType '${reportType}'. Allowed values: ${REPORT_TYPES.join(', ')}`
+    });
+  }
   const job = createJob(req.store, reportType);
-  res.status(201).json({ jobId: job.id, status: job.status, progress: job.progress });
+  res.status(201).json({ id: job.id, jobId: job.id, status: job.status, progress: job.progress });
 });
 
 app.get('/api/reports/:id', (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(req.store.jobs, req.params.id)) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
   const job = req.store.jobs[req.params.id];
   if (!job) {
-    return res.json({ id: req.params.id, status: 'QUEUED', progress: 0, isDownloadReady: false });
+    return res.status(404).json({ error: 'Job not found' });
   }
-  const isDownloadReady = job.status === 'Done';
+  const isDownloadReady = job.status === 'DONE';
   res.json({ id: job.id, status: job.status, progress: job.progress, isDownloadReady });
 });
 
 app.get('/api/reports/:id/download', (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(req.store.jobs, req.params.id)) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
   const job = req.store.jobs[req.params.id];
-  if (job.status === 'QUEUED') {
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+  if (job.status !== 'DONE') {
     return res.status(409).json({ error: 'Report not ready' });
   }
-  if (job.downloaded) {
-    return res.status(409).json({ error: 'Report already downloaded' });
-  }
   job.downloaded = true;
-  res.status(201).json({
+  res.status(200).json({
     id: job.id,
     content: `Report content for ${job.id} (${job.reportType})`,
     generatedAt: new Date().toISOString()
@@ -324,4 +343,3 @@ const server = app.listen(PORT, () => {
 });
 
 module.exports = { app, server };
-
